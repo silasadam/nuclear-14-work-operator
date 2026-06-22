@@ -2,6 +2,7 @@ using Content.Server.Atmos.Components;
 using Content.Server.Atmos.EntitySystems;
 using Content.Server.Explosion.EntitySystems;
 using Content.Shared.Audio;
+using Content.Shared.Buckle;
 using Content.Shared.Buckle.Components;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
@@ -31,6 +32,7 @@ public sealed class MotorbikeSystem : EntitySystem
     [Dependency] private readonly SharedAmbientSoundSystem _ambient = default!;
     [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private readonly SharedBuckleSystem _buckle = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SharedSolutionContainerSystem _solution = default!;
     [Dependency] private readonly SharedToolSystem _tool = default!;
@@ -360,6 +362,12 @@ public sealed class MotorbikeSystem : EntitySystem
 
     private void Explode(EntityUid uid, MotorbikeComponent motorbike)
     {
+        if (TryComp<VehicleComponent>(uid, out var vehicle) &&
+            vehicle.Driver is { } driver)
+        {
+            _buckle.Unbuckle((driver, null), null);
+        }
+
         _explosion.QueueExplosion(
             uid,
             motorbike.ExplosionType,

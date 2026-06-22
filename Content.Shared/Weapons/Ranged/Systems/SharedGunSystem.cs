@@ -345,7 +345,6 @@ public abstract partial class SharedGunSystem : EntitySystem
         }
 
         var fromCoordinates = GetShootOriginCoordinates(user, mountedOriginLeadSeconds);
-        var ignoredEntity = GetShotIgnoreEntity(user);
 
         // #Misfits Add: apply per-gun origin offset (e.g. Assaultron head beam)
         if (gun.ShootOffset != Vector2.Zero)
@@ -483,7 +482,7 @@ public abstract partial class SharedGunSystem : EntitySystem
         var projectile = EnsureComp<ProjectileComponent>(uid);
         Projectiles.SetShooter(uid, projectile, user ?? gunUid);
         projectile.Weapon = gunUid;
-        projectile.ExtraIgnoredEntity = GetShotIgnoreEntity(user);
+        projectile.ExtraIgnoredEntity = GetShotExtraIgnoredEntity(user);
 
         TransformSystem.SetWorldRotation(uid, direction.ToWorldAngle() + projectile.Angle);
     }
@@ -565,15 +564,22 @@ public abstract partial class SharedGunSystem : EntitySystem
         return true;
     }
 
-    protected EntityUid? GetShotIgnoreEntity(EntityUid? user)
+    protected EntityUid? GetShotExtraIgnoredEntity(EntityUid? user)
     {
         if (user is not { } shooter)
             return null;
 
-        if (!TryComp<MechPilotComponent>(shooter, out var mechPilot))
-            return shooter;
+        if (TryComp<BuckleComponent>(shooter, out var buckle) &&
+            buckle.BuckledTo is { } buckledTo &&
+            (HasComp<VehicleComponent>(buckledTo) || HasComp<MountableComponent>(buckledTo)))
+        {
+            return buckledTo;
+        }
 
-        return mechPilot.Mech;
+        if (TryComp<MechPilotComponent>(shooter, out var mechPilot))
+            return mechPilot.Mech;
+
+        return null;
     }
 
     protected abstract void Popup(string message, EntityUid? uid, EntityUid? user);
